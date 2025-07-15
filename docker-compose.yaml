@@ -1,0 +1,50 @@
+services:
+  db-auth:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-migrate:
+    build:
+      context: ./auth-service
+      target: builder
+    command: go run migrations/auto.go
+    environment:
+      AUTH_SERVICE_DSN: ${AUTH_SERVICE_DSN}
+    depends_on:
+      db-auth:
+        condition: service_healthy
+    volumes:
+      - .env:/app/.env
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      AUTH_SERVICE_DSN: ${AUTH_SERVICE_DSN}
+      JWT_SECRET: ${JWT_SECRET}
+      AUTH_SERVICE_REST_PORT: ${AUTH_SERVICE_REST_PORT}
+      GRPC_PORT: ${GRPC_PORT}
+    depends_on:
+      db-auth:
+        condition: service_healthy
+      auth-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${AUTH_SERVICE_REST_PORT}:${AUTH_SERVICE_REST_PORT}"
+      - "${GRPC_PORT}:50051"
+    volumes:
+      - .env:/root/.env
+
+volumes:
+  db_auth_data:
