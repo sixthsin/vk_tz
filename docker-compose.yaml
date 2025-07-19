@@ -15,34 +15,17 @@ services:
       timeout: 5s
       retries: 5
 
-  auth-migrate:
-    build:
-      context: ./auth-service
-      target: builder
-    command: go run migrations/auto.go
-    environment:
-      AUTH_SERVICE_DSN: ${AUTH_SERVICE_DSN}
-    depends_on:
-      db-auth:
-        condition: service_healthy
-    volumes:
-      - .env:/app/.env
-
-  auth-service:
-    build: ./auth-service
+  marketplace-api:
+    build: ./api/v1
     environment:
       AUTH_SERVICE_DSN: ${AUTH_SERVICE_DSN}
       JWT_SECRET: ${JWT_SECRET}
       AUTH_SERVICE_REST_PORT: ${AUTH_SERVICE_REST_PORT}
-      GRPC_PORT: ${GRPC_PORT}
     depends_on:
       db-auth:
         condition: service_healthy
-      auth-migrate:
-        condition: service_completed_successfully
     ports:
       - "${AUTH_SERVICE_REST_PORT}:${AUTH_SERVICE_REST_PORT}"
-      - "${GRPC_PORT}:50051"
     volumes:
       - .env:/root/.env
 

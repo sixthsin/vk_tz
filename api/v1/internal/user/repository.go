@@ -1,9 +1,8 @@
-package repository
+package user
 
 import (
-	"auth-service/internal/model"
-	"auth-service/pkg/db"
 	"errors"
+	"marketplace-api/pkg/db"
 
 	"gorm.io/gorm"
 )
@@ -18,7 +17,7 @@ func NewUserRepository(db *db.Db) *UserRepository {
 	}
 }
 
-func (repo *UserRepository) Create(user *model.User) (*model.User, error) {
+func (repo *UserRepository) Create(user *User) (*User, error) {
 	result := repo.Db.DB.Create(user)
 	if result.Error != nil {
 		return nil, result.Error
@@ -26,8 +25,8 @@ func (repo *UserRepository) Create(user *model.User) (*model.User, error) {
 	return user, nil
 }
 
-func (repo *UserRepository) FindByUsername(username string) (*model.User, error) {
-	var user model.User
+func (repo *UserRepository) FindByUsername(username string) (*User, error) {
+	var user User
 	result := repo.Db.DB.First(&user, "username = ?", username)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {

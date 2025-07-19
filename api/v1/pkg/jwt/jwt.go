@@ -32,3 +32,18 @@ func (j *JWT) Create(data JWTData) (string, error) {
 	}
 	return s, nil
 }
+
+func (j *JWT) Parse(token string) (bool, *JWTData) {
+	t, err := jwt.Parse(token, func(t *jwt.Token) (any, error) {
+		return []byte(j.Secret), nil
+	})
+	if err != nil {
+		return false, nil
+	}
+
+	username := t.Claims.(jwt.MapClaims)["username"]
+
+	return t.Valid, &JWTData{
+		Username: username.(string),
+	}
+}

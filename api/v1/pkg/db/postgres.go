@@ -1,7 +1,7 @@
 package db
 
 import (
-	"auth-service/config"
+	"marketplace-api/config"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

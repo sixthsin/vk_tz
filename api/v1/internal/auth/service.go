@@ -1,24 +1,21 @@
-package service
+package auth
 
 import (
-	"auth-service/config"
-	"auth-service/internal/model"
-	"auth-service/internal/repository"
 	"errors"
-	"time"
+	"marketplace-api/config"
+	"marketplace-api/internal/user"
 
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthServiceDeps struct {
 	*config.Config
-	*repository.UserRepository
+	*user.UserRepository
 }
 
 type AuthService struct {
 	*config.Config
-	*repository.UserRepository
+	*user.UserRepository
 }
 
 func NewAuthService(deps AuthServiceDeps) *AuthService {
@@ -42,7 +39,7 @@ func (s *AuthService) Register(username, password string) (string, error) {
 		return "", err
 	}
 
-	user := &model.User{
+	user := &user.User{
 		Username: username,
 		Password: string(hashedPassword),
 	}
@@ -70,30 +67,4 @@ func (s *AuthService) Login(username, password string) (string, error) {
 	}
 
 	return existedUser.Username, nil
-}
-
-func (s *AuthService) ValidateToken(tokenString string) (*UserResponse, error) {
-	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (any, error) {
-		return []byte(s.Config.Auth.Secret), nil
-	})
-	if err != nil || !token.Valid {
-		return &UserResponse{IsValid: false}, errors.New(ErrInvalidToken)
-	}
-
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return &UserResponse{IsValid: false}, errors.New(ErrInvalidTokenClaims)
-	}
-
-	expirationTime := int64(claims["exp"].(float64))
-	if time.Now().Unix() > expirationTime {
-		return &UserResponse{IsValid: false}, errors.New(ErrTokenExpired)
-	}
-
-	username := claims["username"].(string)
-
-	return &UserResponse{
-		Username: username,
-		IsValid:  true,
-	}, nil
 }

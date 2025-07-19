@@ -1,10 +1,8 @@
-package handler
+package auth
 
 import (
-	"auth-service/config"
-	"auth-service/internal/service"
-	"auth-service/pkg/jwt"
-
+	"marketplace-api/config"
+	"marketplace-api/pkg/jwt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -12,21 +10,25 @@ import (
 
 type AuthHandlerDeps struct {
 	*config.Config
-	*service.AuthService
+	*AuthService
 }
 
 type AuthHandler struct {
 	*config.Config
-	*service.AuthService
+	*AuthService
 }
 
-func NewAuthHandler(router *gin.Engine, deps AuthHandlerDeps) {
+func NewAuthHandler(r *gin.RouterGroup, deps AuthHandlerDeps) {
 	handler := &AuthHandler{
 		Config:      deps.Config,
 		AuthService: deps.AuthService,
 	}
-	router.POST("/auth/register", handler.Register)
-	router.POST("/auth/login", handler.Login)
+
+	auth := r.Group("/auth")
+	{
+		auth.POST("/register", handler.Register)
+		auth.POST("/login", handler.Login)
+	}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -60,7 +62,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token": token,
+		"token":    token,
+		"username": req.Username,
 	})
 }
 
