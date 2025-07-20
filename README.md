@@ -12,6 +12,7 @@
 Настройте файлы окружения, скопировав их из .env.example
 ```bash
 cp .env.example .env
+```
 
 Запустите Docker-compose файл
 ```bash
