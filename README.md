@@ -16,9 +16,9 @@ cp .env.example .env
 ```
 Например
 ```bash
-AUTH_SERVICE_DSN="host=db user=postgres password=my_pass dbname=marketplace_api_db port=5432 sslmode=disable"
+AUTH_SERVICE_DSN="host=db-auth user=postgres password=my_pass dbname=marketplace_api_db port=5432 sslmode=disable"
 AUTH_SERVICE_REST_PORT="8081"
-AUTH_DB_NAME="go_api_auth"
+AUTH_DB_NAME="marketplace_api_db"
 AUTH_DB_USER="postgres"
 AUTH_DB_PASSWORD="my_pass"
 JWT_SECRET="secret"
@@ -26,7 +26,7 @@ JWT_SECRET="secret"
 
 Запустите Docker-compose файл
 ```bash
-docker-compose up -d
+docker-compose up --build
 ```
 
 1. Регистрация
