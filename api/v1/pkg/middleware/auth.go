@@ -40,3 +40,36 @@ func AuthMiddleware(config *config.Config) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func OptionalAuthMiddleware(config *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		authHeader := c.GetHeader("Authorization")
+
+		if authHeader == "" {
+			c.Next()
+			return
+		}
+
+		if !strings.HasPrefix(authHeader, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid token format",
+			})
+			return
+		}
+
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		isValid, data := jwt.NewJWT(config.Auth.Secret).Parse(token)
+		if !isValid {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid token",
+			})
+			return
+		}
+
+		if data != nil && data.Username != "" {
+			c.Set("username", data.Username)
+		}
+
+		c.Next()
+	}
+}

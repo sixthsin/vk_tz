@@ -4,7 +4,7 @@ import (
 	"marketplace-api/config"
 	"marketplace-api/pkg/middleware"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,7 +27,7 @@ func NewAdvertHandler(r *gin.RouterGroup, deps AdvertHandlerDeps) {
 
 	adverts := r.Group("/adverts")
 	{
-		adverts.GET("/", handler.GetAll)
+		adverts.GET("/", middleware.OptionalAuthMiddleware(deps.Config), handler.GetAll)
 		protected := adverts.Use(middleware.AuthMiddleware(deps.Config))
 		{
 			protected.POST("/", handler.Create)
@@ -43,6 +43,12 @@ func (h *AdvertHandler) Create(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+	if req.ImageURL != "" {
+		if !isValidImageURL(req.ImageURL) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid image URL format"})
+			return
+		}
 	}
 
 	username, _ := c.Get("username")
@@ -64,7 +70,7 @@ func (h *AdvertHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"status": "ok",
-		"advert": &AdvertCreateResponse{
+		"advert": &AdvertResponse{
 			Title:       createdAdvert.Title,
 			Description: createdAdvert.Description,
 			ImageURL:    createdAdvert.ImageURL,
@@ -75,35 +81,50 @@ func (h *AdvertHandler) Create(c *gin.Context) {
 }
 
 func (h *AdvertHandler) GetAll(c *gin.Context) {
-	limitString := c.DefaultQuery("limit", "10")
-	limit, err := strconv.Atoi(limitString)
-	if err != nil || limit < 0 {
+	var filter AdvertFilter
+	if err := c.ShouldBindQuery(&filter); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"status":  "error",
-			"message": "Invalid limit parameter",
+			"message": err.Error(),
 		})
 		return
 	}
 
-	offsetString := c.DefaultQuery("offset", "0")
-	offset, err := strconv.Atoi(offsetString)
-	if err != nil || offset < 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "Invalid offset parameter",
-		})
-		return
+	if filter.Limit == 0 {
+		filter.Limit = 10
+	}
+	if filter.SortBy == "" {
+		filter.SortBy = "created_at"
+		filter.SortOrder = "desc"
 	}
 
-	username, _ := c.Get("username")
+	adverts := h.AdvertRepository.GetAdverts(filter)
 
-	adverts := h.AdvertRepository.GetAdverts(limit, offset)
+	username, exists := c.Get("username")
+	if !exists {
+		username = ""
+	}
+
 	for i := range adverts {
-		if adverts[i] == username {
-			adverts[i].IsMine = true
+		adverts[i].IsMine = adverts[i].Author == username
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "ok",
+		"data":   adverts,
+		"meta": gin.H{
+			"offset": filter.Offset,
+			"limit":  filter.Limit,
+			"total":  len(adverts),
+		},
+	})
+}
+func isValidImageURL(imageURL string) bool {
+	validExtensions := []string{".jpg", ".jpeg", ".png"}
+	for _, extension := range validExtensions {
+		if strings.HasSuffix(strings.ToLower(imageURL), extension) {
+			return true
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"adverts": adverts,
-	})
+	return false
 }
